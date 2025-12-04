@@ -1,55 +1,60 @@
-import React, { useState, useEffect } from 'react'
-import { turnsAPI } from '../services/api'
+import React, { useState, useEffect } from "react";
+import { turnsAPI } from "../services/api";
 
 const Turnos = ({ user }) => {
-  const [turnos, setTurnos] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [turnos, setTurnos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // Cargar turnos al montar el componente
   useEffect(() => {
-    loadTurnos()
-  }, [])
+    loadTurnos();
+  }, []);
 
   const loadTurnos = async () => {
     try {
-      setLoading(true)
-      const response = await turnsAPI.getAll()
-      setTurnos(response.data)
-    } catch (error) {
-      setError('Error cargando turnos')
-      console.error(error)
+      setLoading(true);
+      const response = await turnsAPI.getAll();
+
+         console.log("Turnos recibidos del backend:", response.data);
+         
+      setTurnos(response.data);
+    } catch (err) {
+      setError("Error cargando turnos");
+      console.error(err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  // Actualizar estado del turno
-  const updateStatus = async (turnoId, nuevoEstado) => {
+
+const detalleHora = {
+  "mañana": "09:00 - 12:00",
+  "tarde": "13:00 - 17:00",
+  "noche": "18:00 - 21:00"
+}
+
+  const updateStatus = async (id_turno, nuevoEstado) => {
     try {
-      await turnsAPI.updateStatus(turnoId, nuevoEstado)
-      loadTurnos() // Recargar la lista
-    } catch (error) {
-      setError('Error actualizando estado')
-      console.error(error)
+      await turnsAPI.updateStatus(id_turno, nuevoEstado);
+      loadTurnos();
+    } catch (err) {
+      setError("Error actualizando estado");
+      console.error(err);
     }
-  }
+  };
 
-  // Formatear fecha
   const formatFecha = (fecha) => {
-    return new Date(fecha).toLocaleDateString('es-ES')
-  }
+    return new Date(fecha).toLocaleDateString("es-ES");
+  };
 
-  // Obtener clase CSS según estado
   const getEstadoClass = (estado) => {
     const classes = {
-      pendiente: 'bg-warning text-dark',
-      asignado: 'bg-info text-white',
-      en_curso: 'bg-primary text-white',
-      completado: 'bg-success text-white'
-    }
-    return classes[estado] || 'bg-secondary text-white'
-  }
+      pendiente: "bg-warning text-dark",
+      confirmado: "bg-success text-white",
+      cancelado: "bg-danger text-white",
+    };
+    return classes[estado] || "bg-secondary text-white";
+  };
 
   if (loading) {
     return (
@@ -60,12 +65,11 @@ const Turnos = ({ user }) => {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="min-vh-100 bg-light">
-      {/* Navbar simple */}
       <nav className="navbar navbar-dark bg-primary">
         <div className="container">
           <span className="navbar-brand">PlanificaNet - Turnos</span>
@@ -85,9 +89,9 @@ const Turnos = ({ user }) => {
         <div className="card">
           <div className="card-header">
             <h4 className="mb-0">
-              {user.tipo === 'admin' && 'Todos los Turnos'}
-              {user.tipo === 'tecnico' && 'Mis Turnos Asignados'}
-              {user.tipo === 'cliente' && 'Mis Turnos'}
+              {user.rol === 3 && "Todos los Turnos"}
+              {user.rol === 2 && "Mis Turnos Asignados"}
+              {user.rol === 1 && "Mis Turnos"}
             </h4>
           </div>
           <div className="card-body">
@@ -101,51 +105,57 @@ const Turnos = ({ user }) => {
                   <thead>
                     <tr>
                       <th>Fecha</th>
-                      <th>Hora</th>
+                      <th>Franja Horaria</th>
                       <th>Servicio</th>
-                      {(user.tipo === 'admin' || user.tipo === 'tecnico') && <th>Cliente</th>}
-                      {(user.tipo === 'admin' || user.tipo === 'cliente') && <th>Técnico</th>}
+                      <th>Descripción</th>
+                      {(user.rol === 3 || user.rol === 2) && <th>Cliente</th>}
+                      {(user.rol === 3 || user.rol === 1) && <th>Técnico</th>}
                       <th>Estado</th>
-                      {user.tipo !== 'cliente' && <th>Acciones</th>}
+                      {user.rol !== 1 && <th>Acciones</th>}
                     </tr>
                   </thead>
                   <tbody>
                     {turnos.map((turno) => (
-                      <tr key={turno.id}>
+                      <tr key={turno.id_turno}>
                         <td>{formatFecha(turno.fecha)}</td>
-                        <td>{turno.hora}</td>
+                        <td>{turno.franja_horaria} ({detalleHora[turno.franja_horaria]}) </td>
                         <td>
                           <span className="badge bg-secondary">
-                            {turno.servicio === 'instalacion' ? 'Instalación' : 'Soporte'}
+                            {turno.servicio_nombre}
                           </span>
                         </td>
-                        {(user.tipo === 'admin' || user.tipo === 'tecnico') && (
+                        <td>{turno.descripcion || "-"}</td>
+                        {(user.rol === 3 || user.rol === 2) && (
                           <td>{turno.cliente_nombre}</td>
                         )}
-                        {(user.tipo === 'admin' || user.tipo === 'cliente') && (
-                          <td>{turno.tecnico_nombre || 'Por asignar'}</td>
+                        {(user.rol === 3 || user.rol === 1) && (
+                          <td>{turno.tecnico_nombre || "Por asignar"}</td>
                         )}
                         <td>
                           <span className={`badge ${getEstadoClass(turno.estado)}`}>
                             {turno.estado}
                           </span>
                         </td>
-                        {user.tipo !== 'cliente' && (
+                        {user.rol !== 1 && (
                           <td>
-                            {turno.estado === 'asignado' && (
+                            {turno.estado === "pendiente" && (
                               <button
-                                className="btn btn-sm btn-primary me-1"
-                                onClick={() => updateStatus(turno.id, 'en_curso')}
+                                className="btn btn-sm btn-success me-1"
+                                onClick={() =>
+                                  updateStatus(turno.id_turno, "confirmado")
+                                }
                               >
-                                Iniciar
+                                Confirmar
                               </button>
                             )}
-                            {turno.estado === 'en_curso' && (
+                            {turno.estado !== "cancelado" && (
                               <button
-                                className="btn btn-sm btn-success"
-                                onClick={() => updateStatus(turno.id, 'completado')}
+                                className="btn btn-sm btn-danger"
+                                onClick={() =>
+                                  updateStatus(turno.id_turno, "cancelado")
+                                }
                               >
-                                Completar
+                                Cancelar
                               </button>
                             )}
                           </td>
@@ -160,7 +170,7 @@ const Turnos = ({ user }) => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Turnos
+export default Turnos;
