@@ -1,0 +1,31 @@
+# Frontend
+/frontend/node_modules
+/frontend/build
+/frontend/dist
+/frontend/.env
+/frontend/.env.local
+/frontend/.cache
+/frontend/.vite
+/frontend/coverage
+
+# Backend
+/backend/node_modules
+/backend/dist
+/backend/.env
+/backend/.env.local
+
+# Logs y temporales
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.tmp
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Testing
+coverage/
