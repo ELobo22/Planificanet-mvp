@@ -4,6 +4,8 @@ import Login from './components/Login'
 import Dashboard from './components/Dashboard'
 import Turnos from './components/Turnos'
 import SolicitarTurno from './components/SolicitarTurno'
+import RegistroCliente from './components/RegistroCliente'
+
 
 function App() {
   const [user, setUser] = useState(null)
@@ -45,6 +47,7 @@ function App() {
       <div className="App">
         <Routes>
           <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Login onLogin={handleLogin} />} />
+           <Route path="/registro" element={<RegistroCliente />} />
           <Route path="/dashboard" element={user ? <Dashboard user={user} onLogout={handleLogout} /> : <Navigate to="/" />} />
           <Route path="/turnos" element={user ? <Turnos user={user} /> : <Navigate to="/" />} />
           <Route path="/solicitar-turno" element={user && user.tipo === 'cliente' ? <SolicitarTurno user={user} /> : <Navigate to="/dashboard" />} />
