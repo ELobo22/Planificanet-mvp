@@ -104,11 +104,44 @@ app.post('/api/auth/register', async (req, res) => {
     }
 });
 
+// =======================
+// RUTAS DE ZONAS Y BARRIOS
+// =======================
+
+// Obtener todas las zonas
+app.get('/api/zonas', async (req, res) => {
+  try {
+    const [rows] = await db.execute(
+      'SELECT id_zona, nombre FROM zonas ORDER BY nombre ASC'
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('Error obteniendo zonas:', error);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+});
+
+// Obtener barrios por zona
+app.get('/api/barrios/:id_zona', async (req, res) => {
+  try {
+    const { id_zona } = req.params;
+    const [rows] = await db.execute(
+      'SELECT id_barrio, nombre FROM barrios WHERE id_zona = ? ORDER BY nombre ASC',
+      [id_zona]
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('Error obteniendo barrios:', error);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+});
+
+
+
 
 // =======================
 // RUTAS DE TURNOS
 // =======================
-
 
 // Obtener turnos según rol
 app.get('/api/turns', authMiddleware, async (req, res) => {
@@ -178,14 +211,16 @@ app.post('/api/turns', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'Solo clientes pueden crear turnos' });
     }
 
-    const { fecha, franja_horaria, servicio_id, descripcion } = req.body;
+    const { fecha, franja_horaria, servicio_id } = req.body;
     const clienteId = req.user.id;
 
+    // Validar franja horaria
     const franjasValidas = ['mañana', 'tarde', 'noche'];
     if (!franjasValidas.includes(franja_horaria)) {
       return res.status(400).json({ error: 'Franja horaria inválida' });
     }
 
+    // Validar servicio
     const [servicioRows] = await db.execute(
       'SELECT nombre FROM servicios WHERE id_servicio = ?',
       [servicio_id]
@@ -194,6 +229,7 @@ app.post('/api/turns', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Servicio no válido' });
     }
 
+    // Asignar técnico (ejemplo: el primero disponible)
     const [tecnicos] = await db.execute(
       "SELECT id_usuario FROM usuarios WHERE id_rol = 2 LIMIT 1"
     );
@@ -202,18 +238,23 @@ app.post('/api/turns', authMiddleware, async (req, res) => {
     }
     const tecnicoId = tecnicos[0].id_usuario;
 
-    // Insertar turno con descripción
+    // Insertar turno
     const [result] = await db.execute(
-      'INSERT INTO turnos (cliente_id, tecnico_id, fecha, franja_horaria, servicio_id, estado, descripcion) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [clienteId, tecnicoId, fecha, franja_horaria, servicio_id, 'pendiente', descripcion]
+      'INSERT INTO turnos (cliente_id, tecnico_id, fecha, franja_horaria, servicio_id, estado) VALUES (?, ?, ?, ?, ?, ?)',
+      [clienteId, tecnicoId, fecha, franja_horaria, servicio_id, 'pendiente']
+    );
+
+    // Notificación para admin (opcional)
+    await db.execute(
+      'INSERT INTO notificaciones (id_usuario, mensaje) SELECT id_usuario, ? FROM usuarios WHERE id_rol = 3',
+      [`Nuevo turno creado por cliente ${clienteId} para ${servicioRows[0].nombre} (${franja_horaria}) el ${fecha}`]
     );
 
     res.status(201).json({
       message: 'Turno creado exitosamente',
       turnoId: result.insertId,
       servicio_nombre: servicioRows[0].nombre,
-      franja_horaria,
-      descripcion
+      franja_horaria
     });
 
   } catch (error) {
