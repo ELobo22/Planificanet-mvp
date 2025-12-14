@@ -6,8 +6,8 @@ const SolicitarTurno = ({ user }) => {
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     fecha: '',
-    hora: '09:00',
-    servicio: 'instalacion',
+    franja_horaria: 'mañana',
+    servicio_id: 1,
     descripcion: ''
   })
   const [loading, setLoading] = useState(false)
@@ -32,12 +32,11 @@ const SolicitarTurno = ({ user }) => {
       setSuccess('Turno solicitado exitosamente!')
       setFormData({
         fecha: '',
-        hora: '09:00',
-        servicio: 'instalacion',
+        franja_horaria: 'mañana',
+        servicio_id: 1,
         descripcion: ''
       })
       
-      // Redirigir después de 2 segundos
       setTimeout(() => {
         navigate('/turnos')
       }, 2000)
@@ -49,12 +48,10 @@ const SolicitarTurno = ({ user }) => {
     }
   }
 
-  // Fecha mínima (hoy)
   const today = new Date().toISOString().split('T')[0]
 
   return (
     <div className="min-vh-100 bg-light">
-      {/* Navbar simple */}
       <nav className="navbar navbar-dark bg-primary">
         <div className="container">
           <span className="navbar-brand">Solicitar Turno</span>
@@ -72,17 +69,8 @@ const SolicitarTurno = ({ user }) => {
                 <h4 className="mb-0">Solicitar Nuevo Turno</h4>
               </div>
               <div className="card-body">
-                {error && (
-                  <div className="alert alert-danger" role="alert">
-                    {error}
-                  </div>
-                )}
-
-                {success && (
-                  <div className="alert alert-success" role="alert">
-                    {success}
-                  </div>
-                )}
+                {error && <div className="alert alert-danger">{error}</div>}
+                {success && <div className="alert alert-success">{success}</div>}
 
                 <form onSubmit={handleSubmit}>
                   <div className="mb-3">
@@ -99,22 +87,17 @@ const SolicitarTurno = ({ user }) => {
                   </div>
 
                   <div className="mb-3">
-                    <label className="form-label">Hora</label>
+                    <label className="form-label">Franja Horaria</label>
                     <select
                       className="form-select"
-                      name="hora"
-                      value={formData.hora}
+                      name="franja_horaria"
+                      value={formData.franja_horaria}
                       onChange={handleChange}
                       required
                     >
-                      <option value="09:00">09:00 AM</option>
-                      <option value="10:00">10:00 AM</option>
-                      <option value="11:00">11:00 AM</option>
-                      <option value="12:00">12:00 PM</option>
-                      <option value="14:00">02:00 PM</option>
-                      <option value="15:00">03:00 PM</option>
-                      <option value="16:00">04:00 PM</option>
-                      <option value="17:00">05:00 PM</option>
+                      <option value="mañana">Mañana</option>
+                      <option value="tarde">Tarde</option>
+                      <option value="noche">Noche</option>
                     </select>
                   </div>
 
@@ -122,13 +105,13 @@ const SolicitarTurno = ({ user }) => {
                     <label className="form-label">Servicio</label>
                     <select
                       className="form-select"
-                      name="servicio"
-                      value={formData.servicio}
+                      name="servicio_id"
+                      value={formData.servicio_id}
                       onChange={handleChange}
                       required
                     >
-                      <option value="instalacion">Instalación</option>
-                      <option value="soporte">Soporte Técnico</option>
+                      <option value={1}>Instalación</option>
+                      <option value={2}>Soporte Técnico</option>
                     </select>
                   </div>
 
