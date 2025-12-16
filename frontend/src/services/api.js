@@ -44,12 +44,16 @@ export const authAPI = {
 // ===============================
 // API: TURNOS
 // ===============================
-export const turnsAPI = {
-  getAll: () => api.get("/turns"),
-  create: (turnData) => api.post("/turns", turnData),
+export const turnosAPI = {
+  getAll: () => api.get("/turnos"),
+  create: (turnData) => api.post("/turnos", turnData),
   updateStatus: (id, status) =>
-    api.put(`/turns/${id}/status`, { estado: status })
+    api.put(`/turnos/${id}/status`, { estado: status }),
+
+  getProximoTurno: () => api.get('/turnos/proximo'),
+  
 };
+
 
 // ===============================
 // API: UBICACIONES (ZONAS Y BARRIOS)
@@ -59,7 +63,10 @@ export const ubicacionesAPI = {
   getBarrios: (id_zona) => api.get(`/barrios/${id_zona}`)
 };
 
-// ===============================
-// EXPORTACIÓN GENERAL
-// ===============================
+
+export const notificacionesAPI = {
+  getAll: () => api.get("/notificaciones"),
+  marcarLeida: (id) => api.put(`/notificaciones/${id}/leida`)
+};
+
 export default api;

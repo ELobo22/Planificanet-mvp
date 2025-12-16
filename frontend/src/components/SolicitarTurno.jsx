@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { turnsAPI } from '../services/api'
+import { turnosAPI } from '../services/api'
 import { useNavigate } from 'react-router-dom'
 
 const SolicitarTurno = ({ user }) => {
@@ -28,7 +28,7 @@ const SolicitarTurno = ({ user }) => {
     setSuccess('')
 
     try {
-      await turnsAPI.create(formData)
+      await turnosAPI.create(formData)
       setSuccess('Turno solicitado exitosamente!')
       setFormData({
         fecha: '',

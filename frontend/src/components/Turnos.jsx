@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { turnsAPI } from "../services/api";
+import { turnosAPI } from "../services/api";
+
+const formatFecha = (fecha) => {
+  return new Date(fecha).toLocaleDateString("es-ES");
+};
 
 const Turnos = ({ user }) => {
   const [turnos, setTurnos] = useState([]);
@@ -13,7 +17,7 @@ const Turnos = ({ user }) => {
   const loadTurnos = async () => {
     try {
       setLoading(true);
-      const response = await turnsAPI.getAll();
+      const response = await turnosAPI.getAll();
 
          console.log("Turnos recibidos del backend:", response.data);
          
@@ -35,7 +39,7 @@ const detalleHora = {
 
   const updateStatus = async (id_turno, nuevoEstado) => {
     try {
-      await turnsAPI.updateStatus(id_turno, nuevoEstado);
+      await turnosAPI.updateStatus(id_turno, nuevoEstado);
       loadTurnos();
     } catch (err) {
       setError("Error actualizando estado");
@@ -43,9 +47,6 @@ const detalleHora = {
     }
   };
 
-  const formatFecha = (fecha) => {
-    return new Date(fecha).toLocaleDateString("es-ES");
-  };
 
   const getEstadoClass = (estado) => {
     const classes = {
