@@ -26,6 +26,8 @@ const Login = ({ onLogin }) => {
         email: formData.email,
         password: formData.password
       })
+      
+console.log("TOKEN USER:", response.data.user)
 
       onLogin(response.data.user, response.data.token)
 

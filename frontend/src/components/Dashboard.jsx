@@ -1,10 +1,82 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { turnosAPI } from '../services/api'
+import { notificacionesAPI } from '../services/api'
+
+
+const formatFecha = (fecha) => {
+  return new Date(fecha).toLocaleDateString("es-ES");
+};
+
+const detalleHora = {
+  "mañana": "09:00 - 12:00",
+  "tarde": "13:00 - 17:00",
+  "noche": "18:00 - 21:00"
+};
 
 const Dashboard = ({ user, onLogout }) => {
+
+  // Estado para el próximo turno
+  const [proximoTurno, setProximoTurno] = useState(null)
+
+  const [notificaciones, setNotificaciones] = useState([]);
+ 
+  const [mostrarDropdown, setMostrarDropdown] = useState(false);
+
+
+  // Traer próximo turno
+  useEffect(() => {
+    if (user.rol === 1 || user.rol === 2) {
+      const fetchProximoTurno = async () => {
+        try {
+          const response = await turnosAPI.getProximoTurno(user.id_usuario || user.id);
+          setProximoTurno(response.data);
+        } catch (error) {
+          console.error("Error obteniendo próximo turno:", error);
+        }
+      };
+
+      const fetchNotificaciones = async () => {
+        try {
+          const response = await notificacionesAPI.getAll();
+          setNotificaciones(response.data);
+        } catch (error) {
+          console.error("Error obteniendo notificaciones:", error);
+        }
+      };
+
+      fetchProximoTurno();
+      fetchNotificaciones();
+    }
+  }, [user]);
+
+  const noLeidas = notificaciones.filter(n => n.leida === 0).length;
+
+  const notificacionesRecientes = notificaciones
+  .sort((a, b) => new Date(b.fecha_envio) - new Date(a.fecha_envio))
+  .slice(0, 8);
+
+  const marcarComoLeida = async (id) => {
+    try {
+      await notificacionesAPI.marcarLeida(id);
+
+      setNotificaciones((prev) =>
+        prev.map((n) =>
+          n.id_notif === id ? { ...n, leida: 1 } : n
+        )
+      );
+    } catch (error) {
+      console.error("Error marcando notificación:", error);
+    }
+  };
+
+
+  // Contenido según rol
   const getDashboardContent = () => {
-    switch (user.tipo) {
-      case 'cliente':
+    switch (user.rol) {
+
+      // CLIENTE
+      case 1:
         return (
           <div className="row">
             <div className="col-md-6 mb-4">
@@ -18,6 +90,7 @@ const Dashboard = ({ user, onLogout }) => {
                 </div>
               </div>
             </div>
+
             <div className="col-md-6 mb-4">
               <div className="card h-100">
                 <div className="card-body text-center">
@@ -31,8 +104,9 @@ const Dashboard = ({ user, onLogout }) => {
             </div>
           </div>
         )
-      
-      case 'tecnico':
+
+      // TÉCNICO
+      case 2:
         return (
           <div className="row">
             <div className="col-12">
@@ -48,8 +122,9 @@ const Dashboard = ({ user, onLogout }) => {
             </div>
           </div>
         )
-      
-      case 'admin':
+
+      // ADMIN
+      case 3:
         return (
           <div className="row">
             <div className="col-12">
@@ -65,49 +140,147 @@ const Dashboard = ({ user, onLogout }) => {
             </div>
           </div>
         )
-      
+
       default:
         return null
     }
   }
 
   return (
-    <div className="min-vh-100 bg-light">
-      {/* Navbar */}
-      <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div className="container">
-          <span className="navbar-brand">PlanificaNet</span>
-          <div className="navbar-nav ms-auto">
-            <span className="navbar-text me-3">
-              Hola, {user.nombre} ({user.tipo})
-            </span>
-            <button 
-              className="btn btn-outline-light btn-sm"
-              onClick={onLogout}
-            >
-              Cerrar Sesión
-            </button>
-          </div>
-        </div>
-      </nav>
+  <div className="min-vh-100 bg-light">
 
-      {/* Contenido principal */}
-      <div className="container mt-4">
-        <div className="row">
-          <div className="col-12">
-            <div className="card">
-              <div className="card-header">
-                <h4 className="mb-0">Dashboard Principal</h4>
-              </div>
-              <div className="card-body">
-                {getDashboardContent()}
-              </div>
+    {/* ✅ Navbar */}
+    <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+      <div className="container">
+
+        <span className="navbar-brand fw-bold">PlanificaNet</span>
+
+        <div className="navbar-nav ms-auto align-items-center">
+
+          {/* ✅ Notificaciones */}
+          {(user.rol === 1 || user.rol === 2) && (
+            <div className="me-3 position-relative">
+
+              <span 
+                className="text-white fs-5"
+                style={{ cursor: "pointer" }}
+                onClick={() => setMostrarDropdown(!mostrarDropdown)}
+              >
+                🔔
+              </span>
+
+              {noLeidas > 0 && (
+                <span 
+                  className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                  style={{ fontSize: "0.7rem" }}
+                >
+                  {noLeidas}
+                </span>
+              )}
+
+              {mostrarDropdown && (
+                <div 
+                  className="position-absolute bg-white shadow rounded p-2"
+                  style={{
+                    top: "35px",
+                    right: "0",
+                    width: "260px",
+                    zIndex: 999
+                  }}
+                >
+                  <h6 className="border-bottom pb-2 mb-2">Notificaciones</h6>
+
+                  {notificaciones.length === 0 ? (
+                    <p className="text-muted small mb-0">No tenés notificaciones.</p>
+                  ) : (
+                    notificaciones
+                      .sort((a, b) => new Date(b.fecha_envio) - new Date(a.fecha_envio))
+                      .slice(0, 8)
+                      .map((notif) => (
+                        <div 
+                          key={notif.id_notif}
+                          className={`d-flex justify-content-between align-items-center mb-2 
+                            ${notif.leida ? "text-muted" : "fw-bold"}`}
+                        >
+                          <span className="small">{notif.mensaje}</span>
+
+                          {!notif.leida && (
+                            <button
+                              className="btn btn-sm btn-outline-primary"
+                              onClick={() => marcarComoLeida(notif.id_notif)}
+                            >
+                              ✓
+                            </button>
+                          )}
+                        </div>
+                      ))
+                  )}
+
+                  <div className="text-center mt-2">
+                    <Link 
+                      to="/notificaciones"
+                      className="small text-primary text-decoration-none"
+                      onClick={() => setMostrarDropdown(false)}
+                    >
+                      Ver todas
+                    </Link>
+                  </div>
+                </div>
+              )}
+
             </div>
-          </div>
+          )}
+
+          <span className="navbar-text me-3 fw-semibold">
+            {user.nombre}
+          </span>
+
+          <button
+            className="btn btn-outline-light btn-sm"
+            onClick={onLogout}
+          >
+            Cerrar Sesión
+          </button>
+
         </div>
       </div>
+    </nav>
+
+    {/* ✅ Contenido principal */}
+    <div className="container mt-4">
+
+      {/* ✅ Saludo */}
+      <h2 className="fw-bold text-center mb-4">📊 Dashboard Principal</h2>
+      <p className="text-center text-muted mb-4">  Bienvenido al panel de gestión</p>
+
+
+
+      {/* ✅ Próximo turno */}
+      {(user.rol === 1 || user.rol === 2) && (
+        <div className="mb-4 p-4 bg-white shadow-sm border rounded">
+          <h5 className="fw-bold mb-3">📅 Próximo Turno</h5>
+
+          {proximoTurno ? (
+            <div>
+              <p><strong>Fecha:</strong> {formatFecha(proximoTurno.fecha)}</p>
+              <p><strong>Franja horaria:</strong> {proximoTurno.franja_horaria} ({detalleHora[proximoTurno.franja_horaria]})</p>
+              <p><strong>Estado:</strong> {proximoTurno.estado}</p>
+              {proximoTurno.tecnico && (
+                <p><strong>Técnico asignado:</strong> {proximoTurno.tecnico}</p>
+              )}
+            </div>
+          ) : (
+            <p className="text-muted">No tenés turnos próximos.</p>
+          )}
+        </div>
+      )}
+
+      {/* ✅ Contenido según rol */}
+      {getDashboardContent()}
+
     </div>
-  )
-}
+  </div>
+);
+  }
 
 export default Dashboard
