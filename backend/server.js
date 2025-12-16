@@ -5,6 +5,17 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 
+
+function formatearFecha(fecha) {
+  const d = new Date(fecha);
+  const dia = String(d.getDate()).padStart(2, "0");
+  const mes = String(d.getMonth() + 1).padStart(2, "0");
+  const año = d.getFullYear();
+  return `${dia}-${mes}-${año}`;
+}
+
+
+
 dotenv.config();
 
 const app = express();
@@ -138,13 +149,12 @@ app.get('/api/barrios/:id_zona', async (req, res) => {
 
 
 
-
 // =======================
 // RUTAS DE TURNOS
 // =======================
 
 // Obtener turnos según rol
-app.get('/api/turns', authMiddleware, async (req, res) => {
+app.get('/api/turnos', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
     const userRol = req.user.rol;
@@ -202,10 +212,66 @@ app.get('/api/turns', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Error del servidor' });
   }
 });
+// ✅ Obtener el próximo turno del cliente o técnico
+app.get('/api/turnos/proximo', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userRol = req.user.rol;
+
+    let query = "";
+    let params = [];
+
+    // ✅ Cliente → próximo turno del cliente
+    if (userRol === 1) {
+      query = `
+        SELECT t.id_turno, t.fecha, t.franja_horaria, t.estado,
+               t.descripcion, u.nombre AS tecnico_nombre, s.nombre AS servicio_nombre
+        FROM turnos t
+        JOIN servicios s ON t.servicio_id = s.id_servicio
+        LEFT JOIN usuarios u ON t.tecnico_id = u.id_usuario
+        WHERE t.cliente_id = ?
+          AND t.fecha >= CURDATE()
+          AND t.estado IN ('pendiente', 'confirmado')
+        ORDER BY t.fecha ASC, FIELD(t.franja_horaria, 'mañana', 'tarde', 'noche')
+        LIMIT 1
+      `;
+      params = [userId];
+    }
+
+    // ✅ Técnico → próximo turno asignado al técnico
+    else if (userRol === 2) {
+      query = `
+        SELECT t.id_turno, t.fecha, t.franja_horaria, t.estado,
+               t.descripcion, c.nombre AS cliente_nombre, s.nombre AS servicio_nombre
+        FROM turnos t
+        JOIN servicios s ON t.servicio_id = s.id_servicio
+        LEFT JOIN usuarios c ON t.cliente_id = c.id_usuario
+        WHERE t.tecnico_id = ?
+          AND t.fecha >= CURDATE()
+          AND t.estado IN ('pendiente', 'confirmado')
+        ORDER BY t.fecha ASC, FIELD(t.franja_horaria, 'mañana', 'tarde', 'noche')
+        LIMIT 1
+      `;
+      params = [userId];
+    }
+
+    // 
+    else {
+      return res.json(null);
+    }
+
+    const [rows] = await db.execute(query, params);
+    return res.json(rows[0] || null);
+
+  } catch (error) {
+    console.error('Error obteniendo próximo turno:', error);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+});
 
 
-// Crear turno (solo clientes)
-app.post('/api/turns', authMiddleware, async (req, res) => {
+// Crear turno
+app.post('/api/turnos', authMiddleware, async (req, res) => {
   try {
     if (req.user.rol !== 1) {
       return res.status(403).json({ error: 'Solo clientes pueden crear turnos' });
@@ -214,13 +280,12 @@ app.post('/api/turns', authMiddleware, async (req, res) => {
     const { fecha, franja_horaria, servicio_id } = req.body;
     const clienteId = req.user.id;
 
-    // Validar franja horaria
     const franjasValidas = ['mañana', 'tarde', 'noche'];
     if (!franjasValidas.includes(franja_horaria)) {
       return res.status(400).json({ error: 'Franja horaria inválida' });
     }
 
-    // Validar servicio
+    // Obtener nombre del servicio
     const [servicioRows] = await db.execute(
       'SELECT nombre FROM servicios WHERE id_servicio = ?',
       [servicio_id]
@@ -229,7 +294,7 @@ app.post('/api/turns', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Servicio no válido' });
     }
 
-    // Asignar técnico (ejemplo: el primero disponible)
+    // Seleccionar técnico disponible
     const [tecnicos] = await db.execute(
       "SELECT id_usuario FROM usuarios WHERE id_rol = 2 LIMIT 1"
     );
@@ -238,18 +303,33 @@ app.post('/api/turns', authMiddleware, async (req, res) => {
     }
     const tecnicoId = tecnicos[0].id_usuario;
 
-    // Insertar turno
+    // Crear turno
     const [result] = await db.execute(
       'INSERT INTO turnos (cliente_id, tecnico_id, fecha, franja_horaria, servicio_id, estado) VALUES (?, ?, ?, ?, ?, ?)',
       [clienteId, tecnicoId, fecha, franja_horaria, servicio_id, 'pendiente']
     );
 
-    // Notificación para admin (opcional)
+    const fechaFormateada = formatearFecha(fecha);
+
+    // ✅ Notificación para el cliente
     await db.execute(
-      'INSERT INTO notificaciones (id_usuario, mensaje) SELECT id_usuario, ? FROM usuarios WHERE id_rol = 3',
-      [`Nuevo turno creado por cliente ${clienteId} para ${servicioRows[0].nombre} (${franja_horaria}) el ${fecha}`]
+      'INSERT INTO notificaciones (id_usuario, mensaje, fecha_envio, leida) VALUES (?, ?, NOW(), 0)',
+      [
+        clienteId,
+        `Tu turno de ${servicioRows[0].nombre} para el ${fechaFormateada} (${franja_horaria}) fue creado correctamente.`
+      ]
     );
 
+    // ✅ Notificación para el técnico
+    await db.execute(
+      'INSERT INTO notificaciones (id_usuario, mensaje, fecha_envio, leida) VALUES (?, ?, NOW(), 0)',
+      [
+        tecnicoId,
+        `Se te asignó un nuevo turno de ${servicioRows[0].nombre} para el ${fechaFormateada} (${franja_horaria}).`
+      ]
+    );
+
+    // Respuesta final
     res.status(201).json({
       message: 'Turno creado exitosamente',
       turnoId: result.insertId,
@@ -263,14 +343,17 @@ app.post('/api/turns', authMiddleware, async (req, res) => {
   }
 });
 
-// Actualizar estado de turno
-app.put('/api/turns/:id/status', authMiddleware, async (req, res) => {
+
+
+// Actualizar estado del turno (confirmar, cancelar, etc.)
+app.put('/api/turnos/:id/status', authMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
     const { estado } = req.body;
     const userId = req.user.id;
     const userRol = req.user.rol;
 
+    // Solo técnicos o admin pueden actualizar estados
     if (userRol !== 2 && userRol !== 3) {
       return res.status(403).json({ error: 'No tienes permiso para actualizar estados' });
     }
@@ -280,64 +363,81 @@ app.put('/api/turns/:id/status', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Estado inválido' });
     }
 
+    // Obtener turno
     const [turnos] = await db.execute(
-      'SELECT cliente_id, tecnico_id, fecha, franja_horaria, servicio_id , descripcion FROM turnos WHERE id_turno = ?',
+      'SELECT cliente_id, tecnico_id, fecha, franja_horaria, servicio_id, descripcion FROM turnos WHERE id_turno = ?',
       [id]
     );
-    if (turnos.length === 0) return res.status(404).json({ error: 'Turno no encontrado' });
+
+    if (turnos.length === 0) {
+      return res.status(404).json({ error: 'Turno no encontrado' });
+    }
 
     const turno = turnos[0];
 
+    // Si es técnico, solo puede modificar sus propios turnos
     if (userRol === 2 && turno.tecnico_id !== userId) {
       return res.status(403).json({ error: 'No tienes permiso para modificar este turno' });
     }
 
+    // Actualizar estado
     await db.execute('UPDATE turnos SET estado = ? WHERE id_turno = ?', [estado, id]);
 
-    const [servicioRows] = await db.execute(
-      'SELECT nombre FROM servicios WHERE id_servicio = ?',
-      [turno.servicio_id]
-    );
-    const servicioNombre = servicioRows.length ? servicioRows[0].nombre : 'Servicio';
+    // ✅ Formatear fecha usando tu función global
+    const fechaFormateada = formatearFecha(turno.fecha);
 
-    // Notificación para cliente
-    let mensajeCliente = '';
-    if (estado === 'confirmado') {
-      mensajeCliente = `Su turno de ${servicioNombre} el ${turno.fecha} (${turno.franja_horaria}) ha sido confirmado.`;
-    } else if (estado === 'cancelado') {
-      mensajeCliente = `Su turno de ${servicioNombre} el ${turno.fecha} (${turno.franja_horaria}) ha sido cancelado.`;
-    }
+    // ✅ Notificaciones según estado
+if (estado === 'confirmado') {
 
-    if (mensajeCliente) {
-      await db.execute(
-        'INSERT INTO notificaciones (id_usuario, mensaje) VALUES (?, ?)',
-        [turno.cliente_id, mensajeCliente]
-      );
-    }
+  // Cliente
+  await db.execute(
+    'INSERT INTO notificaciones (id_usuario, mensaje, fecha_envio, leida) VALUES (?, ?, NOW(), 0)',
+    [
+      turno.cliente_id,
+      `Tu turno del ${fechaFormateada} (${turno.franja_horaria}) fue confirmado.`
+    ]
+  );
 
-    // Notificación para técnico (si existe técnico asignado)
-    if (turno.tecnico_id) {
-      let mensajeTecnico = '';
-      if (estado === 'confirmado') {
-        mensajeTecnico = `Has confirmado el turno de ${servicioNombre} el ${turno.fecha} (${turno.franja_horaria}).`;
-      } else if (estado === 'cancelado') {
-        mensajeTecnico = `Has cancelado el turno de ${servicioNombre} el ${turno.fecha} (${turno.franja_horaria}).`;
-      }
+  // Técnico
+  await db.execute(
+    'INSERT INTO notificaciones (id_usuario, mensaje, fecha_envio, leida) VALUES (?, ?, NOW(), 0)',
+    [
+      turno.tecnico_id,
+      `Confirmaste el turno del ${fechaFormateada} (${turno.franja_horaria}).`
+    ]
+  );
 
-      if (mensajeTecnico) {
-        await db.execute(
-          'INSERT INTO notificaciones (id_usuario, mensaje) VALUES (?, ?)',
-          [turno.tecnico_id, mensajeTecnico]
-        );
-      }
-    }
+} else if (estado === 'cancelado') {
 
-    res.json({ message: 'Estado actualizado y notificaciones creadas' });
+  // Cliente
+  await db.execute(
+    'INSERT INTO notificaciones (id_usuario, mensaje, fecha_envio, leida) VALUES (?, ?, NOW(), 0)',
+    [
+      turno.cliente_id,
+      `Tu turno del ${fechaFormateada} (${turno.franja_horaria}) fue cancelado.`
+    ]
+  );
+
+  // Técnico
+  await db.execute(
+    'INSERT INTO notificaciones (id_usuario, mensaje, fecha_envio, leida) VALUES (?, ?, NOW(), 0)',
+    [
+      turno.tecnico_id,
+      `El turno del ${fechaFormateada} (${turno.franja_horaria}) fue cancelado.`
+    ]
+  );
+}
+
+
+    res.json({ message: 'Estado actualizado y notificaciones enviadas' });
+
   } catch (error) {
     console.error('Error actualizando estado:', error);
     res.status(500).json({ error: 'Error del servidor' });
   }
 });
+
+
 
 
 
@@ -410,6 +510,8 @@ app.get('/api/health', (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
+
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
     console.log('🚀 PlanificaNet MVP Backend en puerto', PORT);
