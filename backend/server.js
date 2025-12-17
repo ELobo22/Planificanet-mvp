@@ -499,6 +499,20 @@ app.put('/api/notificaciones/:id/leida', authMiddleware, async (req, res) => {
   }
 });
 
+// =======================
+// RUTA DE SERVICIOS
+// =======================
+app.get('/api/servicios', async (req, res) => {
+  try {
+    const [rows] = await db.execute(
+      'SELECT id_servicio AS id, nombre FROM servicios ORDER BY nombre ASC'
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('Error obteniendo servicios:', error);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+});
 
 // =======================
 // Health check

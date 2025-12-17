@@ -51,7 +51,8 @@ export const turnosAPI = {
     api.put(`/turnos/${id}/status`, { estado: status }),
 
   getProximoTurno: () => api.get('/turnos/proximo'),
-  
+  getServicios: () => api.get('/servicios'),
+
 };
 
 

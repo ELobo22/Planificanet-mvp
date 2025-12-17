@@ -44,12 +44,13 @@ const Notificaciones = ({ user, onLogout }) => {
   };
 
   return (
-    <>
-      {/* ✅ Navbar PlanificaNet */}
-      <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div className="min-vh-100 bg-transparent">
+
+      {/* ✅ Navbar unificada */}
+      <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
         <div className="container">
 
-          <span className="navbar-brand">PlanificaNet</span>
+          <span className="navbar-brand fw-bold">PlanificaNet</span>
 
           <div className="navbar-nav ms-auto align-items-center">
 
@@ -57,7 +58,7 @@ const Notificaciones = ({ user, onLogout }) => {
               <div className="me-3 position-relative">
 
                 <span 
-                  className="text-white text-decoration-none fs-5"
+                  className="text-white fs-5"
                   style={{ cursor: "pointer" }}
                   onClick={() => setMostrarDropdown(!mostrarDropdown)}
                 >
@@ -75,13 +76,8 @@ const Notificaciones = ({ user, onLogout }) => {
 
                 {mostrarDropdown && (
                   <div 
-                    className="position-absolute bg-white shadow rounded p-2"
-                    style={{
-                      top: "35px",
-                      right: "0",
-                      width: "260px",
-                      zIndex: 999
-                    }}
+                    className="notif-dropdown position-absolute"
+                    style={{ top: "35px", right: "0", zIndex: 999 }}
                   >
                     <h6 className="border-bottom pb-2 mb-2">Notificaciones</h6>
 
@@ -101,7 +97,7 @@ const Notificaciones = ({ user, onLogout }) => {
 
                             {!notif.leida && (
                               <button
-                                className="btn btn-sm btn-outline-primary"
+                                className="btn btn-sm btn-secondary-custom"
                                 onClick={() => marcarComoLeida(notif.id_notif)}
                               >
                                 ✓
@@ -126,7 +122,7 @@ const Notificaciones = ({ user, onLogout }) => {
               </div>
             )}
 
-            <span className="navbar-text me-3">
+            <span className="navbar-text me-3 fw-semibold">
               {user.nombre}
             </span>
 
@@ -143,55 +139,58 @@ const Notificaciones = ({ user, onLogout }) => {
 
       {/* ✅ Contenido principal */}
       <div className="container mt-4">
-        <h3 className="mb-4 fw-bold">Notificaciones</h3>
+
+        <h2 className="page-title text-center mb-2">🔔 Notificaciones</h2>
+        <p className="page-subtitle text-center mb-4">
+          Revisá tus avisos y novedades
+        </p>
 
         {/* ✅ Botón Volver */}
         <button 
-          className="btn btn-outline-primary mb-3"
+          className="btn-secondary-custom mb-3"
           onClick={() => window.history.back()}
         >
           ← Volver
         </button>
 
-        <div className="card shadow-sm">
-          <div className="card-body">
+        {/* ✅ Tarjeta con estilo global */}
+        <div className="card-container">
 
-            {notificaciones.length === 0 ? (
-              <p className="text-muted">No tenés notificaciones.</p>
-            ) : (
-              <ul className="list-group list-group-flush">
-                {notificaciones.map((notif) => (
-                  <li
-                    key={notif.id_notif}
-                    className={`list-group-item d-flex justify-content-between align-items-start py-3 
-                      ${notif.leida ? "bg-light" : "bg-white border-start border-4 border-primary"}`}
-                  >
-                    <div className="ms-2 me-auto">
-                      <div className={`${notif.leida ? "text-muted" : "fw-bold"}`}>
-                        🔔 {notif.mensaje}
-                      </div>
-                      <small className="text-muted">
-                        {formatearFecha(notif.fecha_envio)}
-                      </small>
+          {notificaciones.length === 0 ? (
+            <p className="text-muted">No tenés notificaciones.</p>
+          ) : (
+            <ul className="list-group list-group-flush">
+              {notificaciones.map((notif) => (
+                <li
+                  key={notif.id_notif}
+                  className={`list-group-item d-flex justify-content-between align-items-start py-3 
+                    ${notif.leida ? "bg-light" : "bg-white border-start border-4 border-primary"}`}
+                >
+                  <div className="ms-2 me-auto">
+                    <div className={`${notif.leida ? "text-muted" : "fw-bold"}`}>
+                      🔔 {notif.mensaje}
                     </div>
+                    <small className="text-muted">
+                      {formatearFecha(notif.fecha_envio)}
+                    </small>
+                  </div>
 
-                    {!notif.leida && (
-                      <button
-                        className="btn btn-sm btn-outline-primary"
-                        onClick={() => marcarComoLeida(notif.id_notif)}
-                      >
-                        Marcar como leída
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
+                  {!notif.leida && (
+                    <button
+                      className="btn btn-sm btn-main"
+                      onClick={() => marcarComoLeida(notif.id_notif)}
+                    >
+                      Marcar como leída
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
 
-          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

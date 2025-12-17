@@ -26,8 +26,6 @@ const Login = ({ onLogin }) => {
         email: formData.email,
         password: formData.password
       })
-      
-console.log("TOKEN USER:", response.data.user)
 
       onLogin(response.data.user, response.data.token)
 
@@ -44,32 +42,19 @@ console.log("TOKEN USER:", response.data.user)
   }
 
   return (
-    <div
-      className="min-vh-100 d-flex align-items-center justify-content-center"
-      style={{
-        background: "linear-gradient(135deg, #e3f2fd, #bbdefb, #e3f2fd)"
-      }}
-    >
-      <div
-        className="card shadow-lg p-4"
-        style={{
-          maxWidth: "450px",
-          width: "100%",
-          borderRadius: "18px",
-          background: "white"
-        }}
-      >
+    <div className="min-vh-100 d-flex align-items-center justify-content-center bg-transparent">
+
+      {/* Tarjeta con estilo global */}
+      <div className="card-container" style={{ maxWidth: "450px", width: "100%" }}>
+
         {/* Encabezado */}
         <div className="text-center mb-4">
-          <h2 className="text-primary fw-bold" style={{ fontSize: "1.9rem" }}>
-            PlanificaNet
-          </h2>
-          <p className="text-muted" style={{ fontSize: "1rem" }}>
-            Sistema de Gestion de Turnos
-          </p>
+          <h2 className="page-title">PlanificaNet</h2>
+          <p className="page-subtitle">Sistema de Gestión de Turnos</p>
         </div>
 
         <form onSubmit={handleSubmit}>
+
           {/* Email */}
           <div className="mb-3">
             <label className="form-label fw-semibold">Email</label>
@@ -96,10 +81,10 @@ console.log("TOKEN USER:", response.data.user)
             />
           </div>
 
-          {/* Botón de login */}
+          {/* Botón de login con estilo global */}
           <button
             type="submit"
-            className="btn btn-primary w-100"
+            className="btn-main w-100"
             disabled={loading}
           >
             {loading ? "Cargando..." : "Iniciar Sesión"}
@@ -118,12 +103,13 @@ console.log("TOKEN USER:", response.data.user)
         </div>
 
         {/* Usuarios de prueba */}
-        <div className="mt-4 p-3 bg-light rounded small">
+        <div className="mt-4 p-3 bg-white rounded small shadow-sm">
           <strong>Usuarios de prueba:</strong><br />
           Admin: admin@planificanet.com / password<br />
           Técnico: tecnico@planificanet.com / password<br />
           Cliente: cliente@test.com / password
         </div>
+
       </div>
     </div>
   )

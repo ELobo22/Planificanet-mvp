@@ -1,18 +1,42 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { turnosAPI } from '../services/api'
 import { useNavigate } from 'react-router-dom'
+import Swal from 'sweetalert2'
+import 'sweetalert2/dist/sweetalert2.min.css'
 
 const SolicitarTurno = ({ user }) => {
   const navigate = useNavigate()
+
   const [formData, setFormData] = useState({
     fecha: '',
     franja_horaria: 'mañana',
-    servicio_id: 1,
+    servicio_id: '',
     descripcion: ''
   })
+
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const [servicios, setServicios] = useState([])
+  const [cargandoServicios, setCargandoServicios] = useState(true)
+
+  useEffect(() => {
+    const fetchServicios = async () => {
+      try {
+        const response = await turnosAPI.getServicios()
+        setServicios(response.data)
+        setCargandoServicios(false)
+      } catch (error) {
+        setCargandoServicios(false)
+        Swal.fire({
+          title: 'Error',
+          text: 'No se pudieron cargar los servicios',
+          icon: 'error',
+          confirmButtonColor: '#dc3545'
+        })
+      }
+    }
+
+    fetchServicios()
+  }, [])
 
   const handleChange = (e) => {
     setFormData({
@@ -24,25 +48,33 @@ const SolicitarTurno = ({ user }) => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
-    setError('')
-    setSuccess('')
 
     try {
       await turnosAPI.create(formData)
-      setSuccess('Turno solicitado exitosamente!')
+
+      Swal.fire({
+        title: '✅ Turno solicitado',
+        text: 'Tu turno fue registrado correctamente',
+        icon: 'success',
+        confirmButtonText: 'Ver mis turnos',
+        confirmButtonColor: '#0d6efd'
+      }).then(() => navigate('/turnos'))
+
       setFormData({
         fecha: '',
         franja_horaria: 'mañana',
-        servicio_id: 1,
+        servicio_id: '',
         descripcion: ''
       })
-      
-      setTimeout(() => {
-        navigate('/turnos')
-      }, 2000)
-      
+
     } catch (error) {
-      setError(error.response?.data?.error || 'Error solicitando turno')
+      Swal.fire({
+        title: '❌ Error',
+        text: error.response?.data?.error || 'No se pudo solicitar el turno',
+        icon: 'error',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#dc3545'
+      })
     } finally {
       setLoading(false)
     }
@@ -51,97 +83,129 @@ const SolicitarTurno = ({ user }) => {
   const today = new Date().toISOString().split('T')[0]
 
   return (
-    <div className="min-vh-100 bg-light">
-      <nav className="navbar navbar-dark bg-primary">
+    <div className="min-vh-100 bg-transparent">
+
+      {/* ✅ Navbar unificada */}
+      <nav className="navbar navbar-dark bg-primary shadow-sm">
         <div className="container">
-          <span className="navbar-brand">Solicitar Turno</span>
+          <span className="navbar-brand fw-bold">PlanificaNet</span>
           <a href="/dashboard" className="btn btn-outline-light btn-sm">
             Volver al Dashboard
           </a>
         </div>
       </nav>
 
+      {/* ✅ Contenido */}
       <div className="container mt-4">
         <div className="row justify-content-center">
           <div className="col-md-8 col-lg-6">
-            <div className="card">
-              <div className="card-header">
-                <h4 className="mb-0">Solicitar Nuevo Turno</h4>
-              </div>
-              <div className="card-body">
-                {error && <div className="alert alert-danger">{error}</div>}
-                {success && <div className="alert alert-success">{success}</div>}
 
-                <form onSubmit={handleSubmit}>
-                  <div className="mb-3">
-                    <label className="form-label">Fecha</label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      name="fecha"
-                      value={formData.fecha}
-                      onChange={handleChange}
-                      min={today}
-                      required
-                    />
-                  </div>
+            {/* ✅ Tarjeta con estilo global */}
+            <div className="card-container">
 
-                  <div className="mb-3">
-                    <label className="form-label">Franja Horaria</label>
-                    <select
-                      className="form-select"
-                      name="franja_horaria"
-                      value={formData.franja_horaria}
-                      onChange={handleChange}
-                      required
-                    >
-                      <option value="mañana">Mañana</option>
-                      <option value="tarde">Tarde</option>
-                      <option value="noche">Noche</option>
-                    </select>
-                  </div>
+              <h2 className="page-title text-center mb-2">🗓️ Nuevo Turno</h2>
+              <p className="page-subtitle text-center mb-4">
+                Completá los datos para solicitar tu turno
+              </p>
 
-                  <div className="mb-3">
-                    <label className="form-label">Servicio</label>
-                    <select
-                      className="form-select"
-                      name="servicio_id"
-                      value={formData.servicio_id}
-                      onChange={handleChange}
-                      required
-                    >
-                      <option value={1}>Instalación</option>
-                      <option value={2}>Soporte Técnico</option>
-                    </select>
-                  </div>
+              <form onSubmit={handleSubmit}>
 
-                  <div className="mb-3">
-                    <label className="form-label">Descripción (opcional)</label>
-                    <textarea
-                      className="form-control"
-                      name="descripcion"
-                      value={formData.descripcion}
-                      onChange={handleChange}
-                      rows="3"
-                      placeholder="Describe el problema o requerimiento..."
-                    />
-                  </div>
+                {/* ✅ Fecha */}
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">Fecha</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    name="fecha"
+                    value={formData.fecha}
+                    onChange={handleChange}
+                    min={today}
+                    required
+                  />
+                </div>
 
-                  <div className="d-grid gap-2">
-                    <button 
-                      type="submit" 
-                      className="btn btn-primary"
-                      disabled={loading}
-                    >
-                      {loading ? 'Solicitando...' : 'Solicitar Turno'}
-                    </button>
-                    <a href="/turnos" className="btn btn-outline-secondary">
-                      Ver Mis Turnos
-                    </a>
-                  </div>
-                </form>
-              </div>
+                {/* ✅ Franja horaria */}
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">Franja Horaria</label>
+                  <select
+                    className="form-select"
+                    name="franja_horaria"
+                    value={formData.franja_horaria}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="mañana">Mañana 09:00 - 12:00</option>
+                    <option value="tarde">Tarde 13:00 - 17:00</option>
+                    <option value="noche">Noche 18:00 - 21:00</option>
+                  </select>
+                </div>
+
+                {/* ✅ Servicio */}
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">Servicio</label>
+                  <select
+                    className="form-select"
+                    name="servicio_id"
+                    value={formData.servicio_id}
+                    onChange={handleChange}
+                    required
+                  >
+                    {cargandoServicios ? (
+                      <option value="">Cargando servicios...</option>
+                    ) : (
+                      <>
+                        <option value="">Seleccionar servicio...</option>
+                        {servicios.map(serv => (
+                          <option key={serv.id} value={serv.id}>
+                            {serv.nombre}
+                          </option>
+                        ))}
+                      </>
+                    )}
+                  </select>
+                </div>
+
+                {/* ✅ Descripción */}
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">Descripción (opcional)</label>
+                  <textarea
+                    className="form-control"
+                    name="descripcion"
+                    value={formData.descripcion}
+                    onChange={handleChange}
+                    rows="3"
+                    placeholder="Describe el problema o requerimiento..."
+                  />
+                </div>
+
+                {/* ✅ Botones con estilos globales */}
+                <div className="d-grid gap-3 mt-4">
+
+                  <button 
+                    type="submit" 
+                    className="btn-main"
+                    disabled={loading}
+                  >
+                    {loading ? 'Procesando...' : 'Confirmar Turno'}
+                  </button>
+
+                  <a href="/dashboard" className="btn-danger-light">
+                    Cancelar
+                  </a>
+
+                  <a href="/turnos" className="btn-secondary-custom">
+                    Ver Mis Turnos
+                  </a>
+
+                </div>
+
+              </form>
             </div>
+
+            <p className="text-center text-muted mt-3" style={{ fontSize: '0.9rem' }}>
+              Asegurate de que los datos sean correctos antes de enviar
+            </p>
+
           </div>
         </div>
       </div>
