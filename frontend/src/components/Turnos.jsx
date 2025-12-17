@@ -18,9 +18,6 @@ const Turnos = ({ user }) => {
     try {
       setLoading(true);
       const response = await turnosAPI.getAll();
-
-         console.log("Turnos recibidos del backend:", response.data);
-         
       setTurnos(response.data);
     } catch (err) {
       setError("Error cargando turnos");
@@ -30,12 +27,11 @@ const Turnos = ({ user }) => {
     }
   };
 
-
-const detalleHora = {
-  "mañana": "09:00 - 12:00",
-  "tarde": "13:00 - 17:00",
-  "noche": "18:00 - 21:00"
-}
+  const detalleHora = {
+    mañana: "09:00 - 12:00",
+    tarde: "13:00 - 17:00",
+    noche: "18:00 - 21:00",
+  };
 
   const updateStatus = async (id_turno, nuevoEstado) => {
     try {
@@ -46,7 +42,6 @@ const detalleHora = {
       console.error(err);
     }
   };
-
 
   const getEstadoClass = (estado) => {
     const classes = {
@@ -59,21 +54,19 @@ const detalleHora = {
 
   if (loading) {
     return (
-      <div className="container mt-4">
-        <div className="d-flex justify-content-center">
-          <div className="spinner-border" role="status">
-            <span className="visually-hidden">Cargando...</span>
-          </div>
-        </div>
+      <div className="container mt-5 text-center">
+        <div className="spinner-border text-primary" role="status"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-vh-100 bg-light">
-      <nav className="navbar navbar-dark bg-primary">
+    <div className="min-vh-100 bg-transparent">
+
+      {/* ✅ Navbar unificada */}
+      <nav className="navbar navbar-dark bg-primary shadow-sm">
         <div className="container">
-          <span className="navbar-brand">PlanificaNet - Turnos</span>
+          <span className="navbar-brand fw-bold">PlanificaNet</span>
           <a href="/dashboard" className="btn btn-outline-light btn-sm">
             Volver al Dashboard
           </a>
@@ -81,93 +74,111 @@ const detalleHora = {
       </nav>
 
       <div className="container mt-4">
+
+        {/* ✅ Título */}
+        <h2 className="page-title text-center mb-2">
+          {user.rol === 3 && "📋 Todos los Turnos"}
+          {user.rol === 2 && "🛠️ Mis Turnos Asignados"}
+          {user.rol === 1 && "📅 Mis Turnos"}
+        </h2>
+
+        <p className="page-subtitle text-center mb-4">
+          Gestión y seguimiento de turnos
+        </p>
+
+        {/* ✅ Error */}
         {error && (
-          <div className="alert alert-danger" role="alert">
-            {error}
-          </div>
+          <div className="alert alert-danger text-center">{error}</div>
         )}
 
-        <div className="card">
-          <div className="card-header">
-            <h4 className="mb-0">
-              {user.rol === 3 && "Todos los Turnos"}
-              {user.rol === 2 && "Mis Turnos Asignados"}
-              {user.rol === 1 && "Mis Turnos"}
-            </h4>
-          </div>
-          <div className="card-body">
-            {turnos.length === 0 ? (
-              <div className="text-center py-4">
-                <p className="text-muted">No hay turnos para mostrar</p>
-              </div>
-            ) : (
-              <div className="table-responsive">
-                <table className="table table-striped">
-                  <thead>
-                    <tr>
-                      <th>Fecha</th>
-                      <th>Franja Horaria</th>
-                      <th>Servicio</th>
-                      <th>Descripción</th>
-                      {(user.rol === 3 || user.rol === 2) && <th>Cliente</th>}
-                      {(user.rol === 3 || user.rol === 1) && <th>Técnico</th>}
-                      <th>Estado</th>
-                      {user.rol !== 1 && <th>Acciones</th>}
+        {/* ✅ Contenedor principal */}
+        <div className="card-container">
+
+          {turnos.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-muted">No hay turnos para mostrar</p>
+            </div>
+          ) : (
+            <div className="table-responsive">
+              <table className="table table-hover align-middle">
+                <thead className="table-light">
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Franja Horaria</th>
+                    <th>Servicio</th>
+                    <th>Descripción</th>
+                    {(user.rol === 3 || user.rol === 2) && <th>Cliente</th>}
+                    {(user.rol === 3 || user.rol === 1) && <th>Técnico</th>}
+                    <th>Estado</th>
+                    {user.rol !== 1 && <th>Acciones</th>}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {turnos.map((turno) => (
+                    <tr key={turno.id_turno}>
+                      <td>{formatFecha(turno.fecha)}</td>
+
+                      <td>
+                        {turno.franja_horaria} (
+                        {detalleHora[turno.franja_horaria]})
+                      </td>
+
+                      <td>
+                        <span className="badge bg-secondary">
+                          {turno.servicio_nombre}
+                        </span>
+                      </td>
+
+                      <td>{turno.descripcion || "-"}</td>
+
+                      {(user.rol === 3 || user.rol === 2) && (
+                        <td>{turno.cliente_nombre}</td>
+                      )}
+
+                      {(user.rol === 3 || user.rol === 1) && (
+                        <td>{turno.tecnico_nombre || "Por asignar"}</td>
+                      )}
+
+                      <td>
+                        <span className={`badge ${getEstadoClass(turno.estado)}`}>
+                          {turno.estado}
+                        </span>
+                      </td>
+
+                      {user.rol !== 1 && (
+                        <td>
+                          {turno.estado === "pendiente" && (
+                            <button
+                              className="btn btn-sm btn-main me-2"
+                              onClick={() =>
+                                updateStatus(turno.id_turno, "confirmado")
+                              }
+                            >
+                              Confirmar
+                            </button>
+                          )}
+
+                          {turno.estado !== "cancelado" && (
+                            <button
+                              className="btn btn-sm btn-danger-light"
+                              onClick={() =>
+                                updateStatus(turno.id_turno, "cancelado")
+                              }
+                            >
+                              Cancelar
+                            </button>
+                          )}
+                        </td>
+                      )}
                     </tr>
-                  </thead>
-                  <tbody>
-                    {turnos.map((turno) => (
-                      <tr key={turno.id_turno}>
-                        <td>{formatFecha(turno.fecha)}</td>
-                        <td>{turno.franja_horaria} ({detalleHora[turno.franja_horaria]}) </td>
-                        <td>
-                          <span className="badge bg-secondary">
-                            {turno.servicio_nombre}
-                          </span>
-                        </td>
-                        <td>{turno.descripcion || "-"}</td>
-                        {(user.rol === 3 || user.rol === 2) && (
-                          <td>{turno.cliente_nombre}</td>
-                        )}
-                        {(user.rol === 3 || user.rol === 1) && (
-                          <td>{turno.tecnico_nombre || "Por asignar"}</td>
-                        )}
-                        <td>
-                          <span className={`badge ${getEstadoClass(turno.estado)}`}>
-                            {turno.estado}
-                          </span>
-                        </td>
-                        {user.rol !== 1 && (
-                          <td>
-                            {turno.estado === "pendiente" && (
-                              <button
-                                className="btn btn-sm btn-success me-1"
-                                onClick={() =>
-                                  updateStatus(turno.id_turno, "confirmado")
-                                }
-                              >
-                                Confirmar
-                              </button>
-                            )}
-                            {turno.estado !== "cancelado" && (
-                              <button
-                                className="btn btn-sm btn-danger"
-                                onClick={() =>
-                                  updateStatus(turno.id_turno, "cancelado")
-                                }
-                              >
-                                Cancelar
-                              </button>
-                            )}
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+                  ))}
+                </tbody>
+
+              </table>
+            </div>
+          )}
+
         </div>
       </div>
     </div>

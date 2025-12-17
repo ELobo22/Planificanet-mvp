@@ -1,0 +1,137 @@
+/* ============================================
+   ESTILOS GLOBALES — PLANIFICANET
+   
+============================================ */
+
+/* ------------------------------
+   TIPOGRAFÍA GENERAL
+------------------------------ */
+
+body {
+  background: linear-gradient(135deg, #e3f2fd, #bbdefb, #e3f2fd) !important;
+  min-height: 100vh;
+  background-attachment: fixed;
+}
+
+
+/* ------------------------------
+   TITULOS
+------------------------------ */
+.page-title,
+h1, h2, h3, h4, h5 {
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.page-subtitle {
+  color: #6c757d;
+  font-size: 1rem;
+}
+
+/* ------------------------------
+   TARJETAS / CONTENEDORES
+------------------------------ */
+.card-container,
+.box-container {
+  background: #ffffff;
+  padding: 25px;
+  border-radius: 12px;
+  border: 1px solid #e5e5e5;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+/* ------------------------------
+   BOTONES
+------------------------------ */
+
+/* Botón principal */
+.btn-main {
+  background-color: #0d6efd;
+  color: white;
+  border-radius: 50px;
+  padding: 12px 22px;
+  font-weight: 600;
+  border: none;
+  transition: 0.2s ease-in-out;
+}
+
+.btn-main:hover {
+  background-color: #0b5ed7;
+  transform: translateY(-2px);
+}
+
+/* Botón secundario */
+.btn-secondary-custom {
+  border-radius: 50px;
+  padding: 10px 20px;
+  font-weight: 600;
+  border: 2px solid #6c757d;
+  color: #6c757d;
+  transition: 0.2s ease-in-out;
+}
+
+.btn-secondary-custom:hover {
+  background-color: #6c757d;
+  color: white;
+}
+
+/* Botón cancelar  */
+.btn-danger-light {
+  background: #fff;
+  border: 2px solid #dc3545;
+  color: #dc3545;
+  border-radius: 50px;
+  padding: 10px 20px;
+  font-weight: 600;
+  transition: 0.2s ease-in-out;
+}
+
+.btn-danger-light:hover {
+  background: #dc3545;
+  color: white;
+}
+
+/* ------------------------------
+   NAVBAR
+------------------------------ */
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1.3rem;
+}
+
+.navbar {
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+/* ------------------------------
+   NOTIFICACIONES DROPDOWN
+------------------------------ */
+.notif-dropdown {
+  background: white;
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  width: 260px;
+}
+
+/* ------------------------------
+   FORMULARIOS
+------------------------------ */
+.form-control,
+.form-select {
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.15rem rgba(13,110,253,0.25);
+}
+
+/* ------------------------------
+   ESPACIADOS
+------------------------------ */
+.section {
+  margin-bottom: 2rem;
+}
