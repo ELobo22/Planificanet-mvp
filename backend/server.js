@@ -186,7 +186,7 @@ app.get('/api/turnos', authMiddleware, async (req, res) => {
         JOIN servicios s ON t.servicio_id = s.id_servicio
         LEFT JOIN usuarios c ON t.cliente_id = c.id_usuario
         WHERE t.tecnico_id = ?
-        ORDER BY t.fecha ASC, t.franja_horaria ASC
+        ORDER BY t.fecha DESC, t.franja_horaria DESC
       `;
       params = [userId];
     } else { // cliente
@@ -277,10 +277,11 @@ app.post('/api/turnos', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'Solo clientes pueden crear turnos' });
     }
 
-    const { fecha, franja_horaria, servicio_id } = req.body;
+    const { fecha, franja_horaria, servicio_id, descripcion } = req.body;
+
     const clienteId = req.user.id;
 
-    const franjasValidas = ['mañana', 'tarde', 'noche'];
+    const franjasValidas = ['Mañana', 'Tarde', 'Noche'];
     if (!franjasValidas.includes(franja_horaria)) {
       return res.status(400).json({ error: 'Franja horaria inválida' });
     }
@@ -295,18 +296,35 @@ app.post('/api/turnos', authMiddleware, async (req, res) => {
     }
 
     // Seleccionar técnico disponible
-    const [tecnicos] = await db.execute(
-      "SELECT id_usuario FROM usuarios WHERE id_rol = 2 LIMIT 1"
-    );
-    if (tecnicos.length === 0) {
-      return res.status(400).json({ error: 'No hay técnicos disponibles' });
-    }
+   const [tecnicos] = await db.execute(
+        ` SELECT u.id_usuario
+        FROM usuarios u
+        WHERE u.id_rol = 2
+          AND u.id_usuario NOT IN (
+            SELECT tecnico_id
+            FROM turnos
+            WHERE fecha = ?
+              AND franja_horaria = ?
+          )
+        LIMIT 1
+        `,
+        [fecha, franja_horaria]
+      );
+
+
+      if (tecnicos.length === 0) {
+        return res.status(400).json({
+          error: "No hay técnicos disponibles. Por favor prueba otra fecha u otra Franja horaria"
+        });
+      }
+
     const tecnicoId = tecnicos[0].id_usuario;
 
     // Crear turno
     const [result] = await db.execute(
-      'INSERT INTO turnos (cliente_id, tecnico_id, fecha, franja_horaria, servicio_id, estado) VALUES (?, ?, ?, ?, ?, ?)',
-      [clienteId, tecnicoId, fecha, franja_horaria, servicio_id, 'pendiente']
+      'INSERT INTO turnos (cliente_id, tecnico_id, fecha, franja_horaria, servicio_id, descripcion, estado) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [clienteId, tecnicoId, fecha, franja_horaria, servicio_id, descripcion, 'Pendiente']
+
     );
 
     const fechaFormateada = formatearFecha(fecha);
@@ -358,7 +376,7 @@ app.put('/api/turnos/:id/status', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'No tienes permiso para actualizar estados' });
     }
 
-    const estadosValidos = ['pendiente', 'confirmado', 'cancelado'];
+    const estadosValidos = ['Pendiente', 'Confirmado', 'Cancelado'];
     if (!estadosValidos.includes(estado)) {
       return res.status(400).json({ error: 'Estado inválido' });
     }
@@ -380,54 +398,60 @@ app.put('/api/turnos/:id/status', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'No tienes permiso para modificar este turno' });
     }
 
-    // Actualizar estado
+    // Obtener nombre del usuario que realiza la acción
+    const [usuarios] = await db.execute(
+      'SELECT nombre FROM usuarios WHERE id_usuario = ?',
+      [userId]
+    );
+    const usuarioAccion = usuarios[0]?.nombre || "Un usuario";
+
+    //  Actualizar estado
     await db.execute('UPDATE turnos SET estado = ? WHERE id_turno = ?', [estado, id]);
 
-    // ✅ Formatear fecha usando tu función global
+    // Formatear fecha
     const fechaFormateada = formatearFecha(turno.fecha);
 
-    // ✅ Notificaciones según estado
-if (estado === 'confirmado') {
+    //  Notificaciones según estado
+    if (estado === 'Confirmado') {
 
-  // Cliente
-  await db.execute(
-    'INSERT INTO notificaciones (id_usuario, mensaje, fecha_envio, leida) VALUES (?, ?, NOW(), 0)',
-    [
-      turno.cliente_id,
-      `Tu turno del ${fechaFormateada} (${turno.franja_horaria}) fue confirmado.`
-    ]
-  );
+      // Cliente
+      await db.execute(
+        'INSERT INTO notificaciones (id_usuario, mensaje, fecha_envio, leida) VALUES (?, ?, NOW(), 0)',
+        [
+          turno.cliente_id,
+          `Tu turno del ${fechaFormateada} (${turno.franja_horaria}) fue confirmado.`
+        ]
+      );
 
-  // Técnico
-  await db.execute(
-    'INSERT INTO notificaciones (id_usuario, mensaje, fecha_envio, leida) VALUES (?, ?, NOW(), 0)',
-    [
-      turno.tecnico_id,
-      `Confirmaste el turno del ${fechaFormateada} (${turno.franja_horaria}).`
-    ]
-  );
+      // Técnico
+      await db.execute(
+        'INSERT INTO notificaciones (id_usuario, mensaje, fecha_envio, leida) VALUES (?, ?, NOW(), 0)',
+        [
+          turno.tecnico_id,
+          `${usuarioAccion} confirmó el turno del ${fechaFormateada} (${turno.franja_horaria}).`
+        ]
+      );
 
-} else if (estado === 'cancelado') {
+    } else if (estado === 'Cancelado') {
 
-  // Cliente
-  await db.execute(
-    'INSERT INTO notificaciones (id_usuario, mensaje, fecha_envio, leida) VALUES (?, ?, NOW(), 0)',
-    [
-      turno.cliente_id,
-      `Tu turno del ${fechaFormateada} (${turno.franja_horaria}) fue cancelado.`
-    ]
-  );
+      // Cliente
+      await db.execute(
+        'INSERT INTO notificaciones (id_usuario, mensaje, fecha_envio, leida) VALUES (?, ?, NOW(), 0)',
+        [
+          turno.cliente_id,
+          `Tu turno del ${fechaFormateada} (${turno.franja_horaria}) fue cancelado.`
+        ]
+      );
 
-  // Técnico
-  await db.execute(
-    'INSERT INTO notificaciones (id_usuario, mensaje, fecha_envio, leida) VALUES (?, ?, NOW(), 0)',
-    [
-      turno.tecnico_id,
-      `El turno del ${fechaFormateada} (${turno.franja_horaria}) fue cancelado.`
-    ]
-  );
-}
-
+      // Técnico
+      await db.execute(
+        'INSERT INTO notificaciones (id_usuario, mensaje, fecha_envio, leida) VALUES (?, ?, NOW(), 0)',
+        [
+          turno.tecnico_id,
+          `${usuarioAccion} canceló el turno del ${fechaFormateada} (${turno.franja_horaria}).`
+        ]
+      );
+    }
 
     res.json({ message: 'Estado actualizado y notificaciones enviadas' });
 
@@ -437,8 +461,119 @@ if (estado === 'confirmado') {
   }
 });
 
+// =======================
+// RUTAS DE USUARIOS
+// =======================
+// Obtener datos del usuario
+app.get('/api/usuarios/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Solo el usuario o el admin pueden ver estos datos
+    if (req.user.id !== parseInt(id) && req.user.rol !== 3) {
+      return res.status(403).json({ error: 'No tienes permiso para ver estos datos' });
+    }
+
+    const [rows] = await db.execute(
+      'SELECT id_usuario, nombre, email, telefono, direccion FROM usuarios WHERE id_usuario = ?',
+      [id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    res.json(rows[0]);
+
+  } catch (error) {
+    console.error('Error obteniendo usuario:', error);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+});
 
 
+// Actualizar datos personales
+app.put('/api/usuarios/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nombre, email, telefono, direccion } = req.body;
+
+    // Solo el usuario o el admin pueden editar
+    if (req.user.id !== parseInt(id) && req.user.rol !== 3) {
+      return res.status(403).json({ error: 'No tienes permiso para editar estos datos' });
+    }
+
+    // VALIDACIÓN: evitar emails duplicados
+    const [existe] = await db.execute(
+  'SELECT id_usuario FROM usuarios WHERE email = ? AND id_usuario <> ?',
+  [email, id]
+    );
+
+if (existe.length > 0) {
+  return res.status(400).json({ error: 'El email ya está en uso' });
+}
+ // Actualizar datos
+    await db.execute(
+      `UPDATE usuarios 
+       SET nombre = ?, email = ?, telefono = ?, direccion = ?
+       WHERE id_usuario = ?`,
+      [nombre, email, telefono, direccion, id]
+    );
+
+    res.json({ message: 'Datos actualizados correctamente' });
+
+  } catch (error) {
+    console.error('Error actualizando usuario:', error);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+});
+
+
+// Cambiar contraseña
+app.put('/api/usuarios/:id/password', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { actual, nueva } = req.body;
+
+    // Solo el usuario puede cambiar su propia contraseña
+    if (req.user.id !== parseInt(id)) {
+      return res.status(403).json({ error: 'No puedes cambiar la contraseña de otro usuario' });
+    }
+
+    // Obtener contraseña actual
+    const [rows] = await db.execute(
+      'SELECT password FROM usuarios WHERE id_usuario = ?',
+      [id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const passwordHash = rows[0].password;
+
+    // Validar contraseña actual
+    const coincide = await bcrypt.compare(actual, passwordHash);
+    if (!coincide) {
+      return res.status(400).json({ error: 'La contraseña actual es incorrecta' });
+    }
+
+    // Encriptar nueva contraseña
+    const nuevaHash = await bcrypt.hash(nueva, 10);
+
+    // Guardar nueva contraseña
+    await db.execute(
+      'UPDATE usuarios SET password = ? WHERE id_usuario = ?',
+      [nuevaHash, id]
+    );
+
+    res.json({ message: 'Contraseña actualizada correctamente' });
+
+  } catch (error) {
+    console.error('Error cambiando contraseña:', error);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+});
 
 
 // =======================
