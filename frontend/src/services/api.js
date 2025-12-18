@@ -41,6 +41,15 @@ export const authAPI = {
   register: (userData) => api.post("/auth/register", userData)
 };
 
+
+
+export const usuariosAPI = {
+  getById: (id) => api.get(`/usuarios/${id}`),
+  update: (id, data) => api.put(`/usuarios/${id}`, data),
+  updatePassword: (id, data) => api.put(`/usuarios/${id}/password`, data),
+};
+
+
 // ===============================
 // API: TURNOS
 // ===============================

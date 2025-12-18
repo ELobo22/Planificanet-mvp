@@ -9,7 +9,7 @@ const SolicitarTurno = ({ user }) => {
 
   const [formData, setFormData] = useState({
     fecha: '',
-    franja_horaria: 'mañana',
+    franja_horaria: 'Mañana',
     servicio_id: '',
     descripcion: ''
   })
@@ -46,46 +46,91 @@ const SolicitarTurno = ({ user }) => {
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
+  e.preventDefault();
 
-    try {
-      await turnosAPI.create(formData)
+  // Validación 1: No permitir sábados ni domingos
+  const fechaSeleccionada = new Date(formData.fecha);
+  const diaSemana = fechaSeleccionada.getDay(); // 0 = domingo, 6 = sábado
 
-      Swal.fire({
-        title: '✅ Turno solicitado',
-        text: 'Tu turno fue registrado correctamente',
-        icon: 'success',
-        confirmButtonText: 'Ver mis turnos',
-        confirmButtonColor: '#0d6efd'
-      }).then(() => navigate('/turnos'))
-
-      setFormData({
-        fecha: '',
-        franja_horaria: 'mañana',
-        servicio_id: '',
-        descripcion: ''
-      })
-
-    } catch (error) {
-      Swal.fire({
-        title: '❌ Error',
-        text: error.response?.data?.error || 'No se pudo solicitar el turno',
-        icon: 'error',
-        confirmButtonText: 'Entendido',
-        confirmButtonColor: '#dc3545'
-      })
-    } finally {
-      setLoading(false)
-    }
+  if (diaSemana === 5 || diaSemana === 6) {
+    Swal.fire({
+      title: "Día no permitido",
+      text: "No podés solicitar turnos los días sábado o domingo.",
+      icon: "warning",
+      confirmButtonColor: "#0d6efd"
+    });
+    return;
   }
+
+  setLoading(true);
+  try {
+    // 1. Obtener todos los turnos
+          const responseTurnos = await turnosAPI.getAll();
+          console.log(responseTurnos.data);
+
+            // 2. Normalizar la fecha seleccionada
+            const fechaSeleccionada = formData.fecha; // "2025-12-22"
+
+            // 3. Filtrar turnos que coincidan con la fecha (sin importar el cliente)
+            const turnosMismoDia = responseTurnos.data.filter((t) => {
+              const fechaTurno = t.fecha.split("T")[0]; // "2025-12-22"
+              return fechaTurno === fechaSeleccionada;
+            });
+
+            // 4. Si ya existe un turno ese día, bloquear
+            if (turnosMismoDia.length > 0) {
+              Swal.fire({
+                title: "Turno duplicado",
+                text: "Ya existe un turno registrado para este día. Elegí otra fecha.",
+                icon: "warning",
+                confirmButtonColor: "#0d6efd"
+              });
+              setLoading(false);
+              return;
+            }
+
+         
+
+
+    // 4. Crear el turno si pasa la validación
+    await turnosAPI.create(formData);
+
+    Swal.fire({
+      title: "Turno solicitado",
+      text: "Tu turno fue registrado correctamente",
+      icon: "success",
+      confirmButtonText: "Ver mis turnos",
+      confirmButtonColor: "#0d6efd"
+    }).then(() => navigate("/turnos"));
+
+    setFormData({
+      fecha: "",
+      franja_horaria: "mañana",
+      servicio_id: "",
+      descripcion: ""
+    });
+
+  } catch (error) {
+    Swal.fire({
+      title: "Error",
+      text: error.response?.data?.error || "No se pudo solicitar el turno",
+      icon: "error",
+      confirmButtonText: "Entendido",
+      confirmButtonColor: "#dc3545"
+    });
+  } finally {
+    setLoading(false);
+  }
+
+};
+
 
   const today = new Date().toISOString().split('T')[0]
 
   return (
     <div className="min-vh-100 bg-transparent">
 
-      {/* ✅ Navbar unificada */}
+      {/*  Navbar unificada */}
       <nav className="navbar navbar-dark bg-primary shadow-sm">
         <div className="container">
           <span className="navbar-brand fw-bold">PlanificaNet</span>
@@ -95,12 +140,12 @@ const SolicitarTurno = ({ user }) => {
         </div>
       </nav>
 
-      {/* ✅ Contenido */}
+      {/* Contenido */}
       <div className="container mt-4">
         <div className="row justify-content-center">
           <div className="col-md-8 col-lg-6">
 
-            {/* ✅ Tarjeta con estilo global */}
+            {/* Tarjeta con estilo global */}
             <div className="card-container">
 
               <h2 className="page-title text-center mb-2">🗓️ Nuevo Turno</h2>
@@ -110,7 +155,7 @@ const SolicitarTurno = ({ user }) => {
 
               <form onSubmit={handleSubmit}>
 
-                {/* ✅ Fecha */}
+                {/* Fecha */}
                 <div className="mb-3">
                   <label className="form-label fw-semibold">Fecha</label>
                   <input
@@ -124,7 +169,7 @@ const SolicitarTurno = ({ user }) => {
                   />
                 </div>
 
-                {/* ✅ Franja horaria */}
+                {/* Franja horaria */}
                 <div className="mb-3">
                   <label className="form-label fw-semibold">Franja Horaria</label>
                   <select
@@ -134,13 +179,13 @@ const SolicitarTurno = ({ user }) => {
                     onChange={handleChange}
                     required
                   >
-                    <option value="mañana">Mañana 09:00 - 12:00</option>
-                    <option value="tarde">Tarde 13:00 - 17:00</option>
-                    <option value="noche">Noche 18:00 - 21:00</option>
+                    <option value="Mañana">Mañana 09:00 - 12:00</option>
+                    <option value="Tarde">Tarde 13:00 - 17:00</option>
+                    <option value="Noche">Noche 18:00 - 21:00</option>
                   </select>
                 </div>
 
-                {/* ✅ Servicio */}
+                {/* Servicio */}
                 <div className="mb-3">
                   <label className="form-label fw-semibold">Servicio</label>
                   <select
@@ -165,7 +210,7 @@ const SolicitarTurno = ({ user }) => {
                   </select>
                 </div>
 
-                {/* ✅ Descripción */}
+                {/* Descripción */}
                 <div className="mb-3">
                   <label className="form-label fw-semibold">Descripción (opcional)</label>
                   <textarea
@@ -178,16 +223,17 @@ const SolicitarTurno = ({ user }) => {
                   />
                 </div>
 
-                {/* ✅ Botones con estilos globales */}
+                {/* Botones con estilos globales */}
                 <div className="d-grid gap-3 mt-4">
 
                   <button 
                     type="submit" 
-                    className="btn-main"
+                    className="btn-main w-100"
                     disabled={loading}
                   >
                     {loading ? 'Procesando...' : 'Confirmar Turno'}
                   </button>
+
 
                   <a href="/dashboard" className="btn-danger-light">
                     Cancelar
