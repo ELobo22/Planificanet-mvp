@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { turnosAPI } from "../services/api";
+import Swal from "sweetalert2";
+
 
 const formatFecha = (fecha) => {
   return new Date(fecha).toLocaleDateString("es-ES");
@@ -18,6 +20,8 @@ const Turnos = ({ user }) => {
     try {
       setLoading(true);
       const response = await turnosAPI.getAll();
+      
+
       setTurnos(response.data);
     } catch (err) {
       setError("Error cargando turnos");
@@ -32,6 +36,41 @@ const Turnos = ({ user }) => {
     tarde: "13:00 - 17:00",
     noche: "18:00 - 21:00",
   };
+const handleAccion = async (id_turno, nuevoEstado) => {
+  try {
+    await updateStatus(id_turno, nuevoEstado);
+
+    if (nuevoEstado === "Confirmado") {
+      Swal.fire({
+        icon: "success",
+        title: "Turno confirmado",
+        text: "El turno fue confirmado correctamente.",
+        timer: 2000,
+        showConfirmButton: false
+      });
+    }
+
+    if (nuevoEstado === "Cancelado") {
+      Swal.fire({
+        icon: "info",
+        title: "Turno cancelado",
+        text: "El turno fue cancelado correctamente.",
+        timer: 2000,
+        showConfirmButton: false
+      });
+    }
+
+  } catch (err) {
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "Ocurrió un error al actualizar el turno.",
+    });
+  }
+};
+
+
+
 
   const updateStatus = async (id_turno, nuevoEstado) => {
     try {
@@ -49,7 +88,8 @@ const Turnos = ({ user }) => {
       confirmado: "bg-success text-white",
       cancelado: "bg-danger text-white",
     };
-    return classes[estado] || "bg-secondary text-white";
+    return classes[estado.toLowerCase()] || "bg-secondary text-white";
+
   };
 
   if (loading) {
@@ -60,10 +100,11 @@ const Turnos = ({ user }) => {
     );
   }
 
+
   return (
     <div className="min-vh-100 bg-transparent">
 
-      {/* ✅ Navbar unificada */}
+      {/* Navbar unificada */}
       <nav className="navbar navbar-dark bg-primary shadow-sm">
         <div className="container">
           <span className="navbar-brand fw-bold">PlanificaNet</span>
@@ -75,7 +116,7 @@ const Turnos = ({ user }) => {
 
       <div className="container mt-4">
 
-        {/* ✅ Título */}
+        {/* Título */}
         <h2 className="page-title text-center mb-2">
           {user.rol === 3 && "📋 Todos los Turnos"}
           {user.rol === 2 && "🛠️ Mis Turnos Asignados"}
@@ -86,12 +127,12 @@ const Turnos = ({ user }) => {
           Gestión y seguimiento de turnos
         </p>
 
-        {/* ✅ Error */}
+        {/* Error */}
         {error && (
           <div className="alert alert-danger text-center">{error}</div>
         )}
 
-        {/* ✅ Contenedor principal */}
+        {/* Contenedor principal */}
         <div className="card-container">
 
           {turnos.length === 0 ? (
@@ -110,7 +151,7 @@ const Turnos = ({ user }) => {
                     {(user.rol === 3 || user.rol === 2) && <th>Cliente</th>}
                     {(user.rol === 3 || user.rol === 1) && <th>Técnico</th>}
                     <th>Estado</th>
-                    {user.rol !== 1 && <th>Acciones</th>}
+                    {<th>Acciones</th>}
                   </tr>
                 </thead>
 
@@ -142,35 +183,50 @@ const Turnos = ({ user }) => {
 
                       <td>
                         <span className={`badge ${getEstadoClass(turno.estado)}`}>
-                          {turno.estado}
+                          {turno.estado.charAt(0).toUpperCase() + turno.estado.slice(1).toLowerCase()}
                         </span>
                       </td>
 
-                      {user.rol !== 1 && (
-                        <td>
-                          {turno.estado === "pendiente" && (
+                      <td className="d-flex flex-column gap-2">
+
+                        {/* ✅ Cliente puede cancelar */}
+                        {user.rol === 1 && turno.estado.toLowerCase() !== "cancelado" && (
+                          <button
+                            className="btn btn-sm d-flex align-items-center gap-1 text-danger"
+                            style={{ background: "transparent", border: "none" }}
+                            onClick={() => handleAccion(turno.id_turno, "Cancelado")}
+                          >
+                            ❌ <span>Cancelar</span>
+                          </button>
+                        )}
+
+                        {/* ✅ Técnico/Admin pueden confirmar */}
+                        {(user.rol === 2 || user.rol === 3) &&
+                          turno.estado.toLowerCase() === "pendiente" && (
                             <button
-                              className="btn btn-sm btn-main me-2"
-                              onClick={() =>
-                                updateStatus(turno.id_turno, "confirmado")
-                              }
+                              className="btn btn-sm d-flex align-items-center gap-1 text-success"
+                              style={{ background: "transparent", border: "none" }}
+                              onClick={() => handleAccion(turno.id_turno, "Confirmado")}
                             >
-                              Confirmar
+                              ✅ <span>Confirmar</span>
                             </button>
                           )}
 
-                          {turno.estado !== "cancelado" && (
+                        {/* ✅ Técnico/Admin pueden cancelar */}
+                        {(user.rol === 2 || user.rol === 3) &&
+                          turno.estado.toLowerCase() !== "cancelado" && (
                             <button
-                              className="btn btn-sm btn-danger-light"
-                              onClick={() =>
-                                updateStatus(turno.id_turno, "cancelado")
-                              }
+                              className="btn btn-sm d-flex align-items-center gap-1 text-danger"
+                              style={{ background: "transparent", border: "none" }}
+                              onClick={() => handleAccion(turno.id_turno, "Cancelado")}
                             >
-                              Cancelar
+                              ❌ <span>Cancelar</span>
                             </button>
                           )}
-                        </td>
-                      )}
+
+                      </td>
+
+
                     </tr>
                   ))}
                 </tbody>

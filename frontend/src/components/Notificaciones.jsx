@@ -46,7 +46,7 @@ const Notificaciones = ({ user, onLogout }) => {
   return (
     <div className="min-vh-100 bg-transparent">
 
-      {/* ✅ Navbar unificada */}
+      {/* Navbar unificada */}
       <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
         <div className="container">
 
@@ -126,18 +126,13 @@ const Notificaciones = ({ user, onLogout }) => {
               {user.nombre}
             </span>
 
-            <button
-              className="btn btn-outline-light btn-sm"
-              onClick={onLogout}
-            >
-              Cerrar Sesión
-            </button>
+          
 
           </div>
         </div>
       </nav>
 
-      {/* ✅ Contenido principal */}
+      {/* Contenido principal */}
       <div className="container mt-4">
 
         <h2 className="page-title text-center mb-2">🔔 Notificaciones</h2>
@@ -145,7 +140,7 @@ const Notificaciones = ({ user, onLogout }) => {
           Revisá tus avisos y novedades
         </p>
 
-        {/* ✅ Botón Volver */}
+        {/* Botón Volver */}
         <button 
           className="btn-secondary-custom mb-3"
           onClick={() => window.history.back()}
@@ -153,7 +148,7 @@ const Notificaciones = ({ user, onLogout }) => {
           ← Volver
         </button>
 
-        {/* ✅ Tarjeta con estilo global */}
+        {/* Tarjeta con estilo global */}
         <div className="card-container">
 
           {notificaciones.length === 0 ? (

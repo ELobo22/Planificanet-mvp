@@ -6,7 +6,7 @@ import Turnos from './components/Turnos'
 import SolicitarTurno from './components/SolicitarTurno'
 import RegistroCliente from './components/RegistroCliente'
 import Notificaciones from './components/Notificaciones'
-
+import PerfilUsuario from './components/PerfilUsuario'
 
 
 function App() {
@@ -54,6 +54,7 @@ function App() {
           <Route path="/turnos" element={user ? <Turnos user={user} /> : <Navigate to="/" />} />
           <Route path="/solicitar-turno" element={user && user.rol === 1 ? <SolicitarTurno user={user} /> : <Navigate to="/dashboard" />} />
           <Route   path="/notificaciones"    element={<Notificaciones user={user} onLogout={handleLogout} />} />
+          <Route path="/perfil" element={<PerfilUsuario user={user} />} />
 
         </Routes>
       </div>

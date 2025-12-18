@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { turnosAPI } from '../services/api'
-import { notificacionesAPI } from '../services/api'
+import { turnosAPI, notificacionesAPI } from '../services/api'
 
 const formatFecha = (fecha) => {
   return new Date(fecha).toLocaleDateString("es-ES");
@@ -125,14 +124,43 @@ const Dashboard = ({ user, onLogout }) => {
   return (
     <div className="min-vh-100 bg-transparent">
 
-      {/* ✅ Navbar */}
+      {/* Navbar */}
       <nav className="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
         <div className="container">
 
           <span className="navbar-brand fw-bold">PlanificaNet</span>
+          
+          <div className="navbar-nav ms-auto align-items-center d-flex gap-3">
+            {/* Nombre del usuario logueado */}
+                <span className="text-white fw-semibold">
+                  {user?.nombre}
+                </span>
 
-          <div className="navbar-nav ms-auto align-items-center">
 
+
+            {/* Menú de usuario (Perfil + Cerrar sesión) */}
+            <div className="dropdown">
+              <span
+                className="text-white fs-5"
+                style={{ cursor: "pointer" }}
+                data-bs-toggle="dropdown"
+              >
+                👤
+              </span>
+
+              <ul className="dropdown-menu dropdown-menu-end">
+                <li>
+                  <a className="dropdown-item" href="/perfil">Mi Perfil</a>
+                </li>
+                <li>
+                  <button className="dropdown-item" onClick={onLogout}>
+                    Cerrar sesión
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            {/* Notificaciones (solo cliente y técnico) */}
             {(user.rol === 1 || user.rol === 2) && (
               <div className="me-3 position-relative">
 
@@ -154,7 +182,10 @@ const Dashboard = ({ user, onLogout }) => {
                 )}
 
                 {mostrarDropdown && (
-                  <div className="notif-dropdown position-absolute" style={{ top: "35px", right: "0", zIndex: 999 }}>
+                  <div 
+                    className="notif-dropdown position-absolute" 
+                    style={{ top: "35px", right: "0", zIndex: 999 }}
+                  >
                     <h6 className="border-bottom pb-2 mb-2">Notificaciones</h6>
 
                     {notificaciones.length === 0 ? (
@@ -198,19 +229,11 @@ const Dashboard = ({ user, onLogout }) => {
               </div>
             )}
 
-            <span className="navbar-text me-3 fw-semibold">
-              {user.nombre}
-            </span>
-
-            <button className="btn btn-outline-light btn-sm" onClick={onLogout}>
-              Cerrar Sesión
-            </button>
-
           </div>
         </div>
       </nav>
 
-      {/* ✅ Contenido principal */}
+      {/* Contenido principal */}
       <div className="container mt-4">
 
         <h2 className="page-title text-center mb-2">📊 Dashboard Principal</h2>
@@ -223,11 +246,23 @@ const Dashboard = ({ user, onLogout }) => {
             {proximoTurno ? (
               <div>
                 <p><strong>Fecha:</strong> {formatFecha(proximoTurno.fecha)}</p>
-                <p><strong>Franja horaria:</strong> {proximoTurno.franja_horaria} ({detalleHora[proximoTurno.franja_horaria]})</p>
-                <p><strong>Estado:</strong> {proximoTurno.estado}</p>
-                {proximoTurno.tecnico && (
-                  <p><strong>Técnico asignado:</strong> {proximoTurno.tecnico}</p>
+                <p>
+                  <strong>Franja horaria:</strong> {proximoTurno.franja_horaria} (
+                    {detalleHora[
+                      proximoTurno.franja_horaria.charAt(0).toUpperCase() + 
+                      proximoTurno.franja_horaria.slice(1)
+                    ]}
+                  )
+                </p>
+                <p>
+                  <strong>Estado:</strong>{" "}
+                  {proximoTurno.estado.charAt(0).toUpperCase() + proximoTurno.estado.slice(1).toLowerCase()}
+                </p>
+
+                {proximoTurno.tecnico_nombre && (
+                  <p><strong>Técnico asignado:</strong> {proximoTurno.tecnico_nombre}</p>
                 )}
+
               </div>
             ) : (
               <p className="text-muted">No tenés turnos próximos.</p>
